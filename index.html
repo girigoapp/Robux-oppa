@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rbx Forge - Générateur Robux Gratuit</title>
+    <title>Yuno Tech RBX - Générateur Robux</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
@@ -28,6 +28,25 @@
             background: radial-gradient(circle, rgba(0, 255, 100, 0.18) 0%, transparent 70%);
             pointer-events: none;
             z-index: 1;
+        }
+        
+        .rain {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        .bill {
+            position: absolute;
+            color: #00ff88;
+            font-size: 32px;
+            text-shadow: 0 0 12px #00ff88;
+            animation: fall linear forwards;
+        }
+        
+        @keyframes fall {
+            to { transform: translateY(120vh) rotate(720deg); }
         }
         
         .container {
@@ -184,19 +203,52 @@
             outline: none;
         }
         
-        .footer-text {
-            text-align: center;
+        .notifications {
             margin-top: 20px;
+            background: rgba(30,30,30,0.9);
+            border: 1px solid #00ff88;
+            border-radius: 12px;
+            padding: 12px;
+            max-height: 160px;
+            overflow: hidden;
             font-size: 13px;
-            color: #555;
         }
         
-        .error { 
-            color: #ff4444; 
-            margin-top: 12px; 
-            font-size: 14px; 
-            display: none; 
+        .notif {
+            padding: 8px 0;
+            border-bottom: 1px solid #222;
+        }
+        
+        .warning {
+            background: #3a2a00;
+            color: #ffd700;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            border: 1px solid #ffd700;
+        }
+        
+        .operators {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .op-btn {
+            flex: 1;
+            padding: 12px;
+            background: #1f1f1f;
+            border: 2px solid #333;
+            border-radius: 10px;
             text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .op-btn.active {
+            border-color: #00ff88;
+            background: rgba(0,255,136,0.15);
         }
         
         .modal {
@@ -223,19 +275,19 @@
 </head>
 <body>
     <div class="background-glow"></div>
+    <div class="rain" id="rainContainer"></div>
     
     <div class="container">
-        <!-- Header -->
         <div class="header">
             <div class="logo">
                 <div class="logo-icon">□</div>
-                <span>Rbx Forge</span>
+                <span>Yuno Tech RBX</span>
             </div>
             <span style="color:#666; font-size:24px; cursor:pointer;">×</span>
         </div>
         <div class="progress"></div>
 
-        <!-- STEP 1: Pseudo -->
+        <!-- STEP 1 -->
         <div class="content" id="stepPseudo">
             <h1 class="title">Ton compte Roblox</h1>
             <p class="subtitle">Entre le pseudo qui recevra les Robux.</p>
@@ -249,10 +301,9 @@
             </div>
             
             <button class="btn" onclick="goToAmount()">Continuer →</button>
-            <div class="footer-text">Étape 1/3</div>
         </div>
 
-        <!-- STEP 2: Montant & Téléphone -->
+        <!-- STEP 2 -->
         <div class="content" id="stepAmount" style="display:none;">
             <h1 class="title">Montant & vérification</h1>
             <div class="account" id="displayPseudo">Compte : @swz_wz</div>
@@ -275,6 +326,16 @@
             
             <div class="input-group">
                 <label class="input-label">Numéro de téléphone (vérification)</label>
+                <div class="warning">
+                    ⚠️ Disponible uniquement pour les numéros <span style="color:#ff4444;">SFR</span>, <span style="color:#00aaff;">Bouygues Telecom</span> et <span style="color:#ff8800;">Orange</span> — tous les autres opérateurs ne fonctionnent pas
+                </div>
+                
+                <div class="operators">
+                    <div class="op-btn active" onclick="selectOp(this)">SFR</div>
+                    <div class="op-btn" onclick="selectOp(this)">Bouygues</div>
+                    <div class="op-btn" onclick="selectOp(this)">Orange</div>
+                </div>
+                
                 <div class="input-wrapper">
                     <span class="input-icon">📱</span>
                     <input type="tel" id="phoneInput" value="06 12 34 56 78">
@@ -282,10 +343,9 @@
             </div>
             
             <button class="btn" onclick="goToCode()">Recevoir le code</button>
-            <div class="footer-text">Étape 2/3</div>
         </div>
 
-        <!-- STEP 3: Code de vérification -->
+        <!-- STEP 3 -->
         <div class="content" id="stepCode" style="display:none;">
             <h1 class="title">Code de vérification</h1>
             <div class="subtitle" id="codeSubtitle">
@@ -303,11 +363,12 @@
             <div id="codeError" class="error">Code incorrect. Veuillez réessayer.</div>
             
             <button class="btn" onclick="validateCode()">Valider le code</button>
-            <div class="footer-text">Étape 3/3</div>
         </div>
+
+        <!-- Fake Notifications -->
+        <div class="notifications" id="notifContainer"></div>
     </div>
 
-    <!-- Success Modal -->
     <div class="modal" id="successModal">
         <div class="modal-content">
             <h2 style="color:#00ff88; margin-bottom:15px;">🎉 Succès !</h2>
@@ -319,6 +380,17 @@
     <script>
         let currentPseudo = "swz_wz";
         let currentAmount = 4500;
+
+        const notifs = [
+            "🔥 DarkNinja_92 a reçu 10 000 Robux !",
+            "✨ ShadowQueen a reçu 4 500 Robux",
+            "🚀 ProGamerFR a réussi la tech RBX grâce à Yuno ! DM Yuno pour la tech gratuite",
+            "💎 RobuxKing a reçu 17 000 Robux",
+            "🌟 Swz_Wz vient de gagner avec Yuno Tech RBX",
+            "⚡ NoobMaster a réussi la tech grâce à Yuno - DM pour avoir la méthode",
+            "🏆 ElitePlayer_77 a reçu 25 000 Robux via Yuno",
+            "🎮 PixelQueenFR a réussi la tech RBX - DM Yuno maintenant"
+        ];
 
         document.querySelectorAll('.amount-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -338,7 +410,6 @@
         function goToCode() {
             document.getElementById('stepAmount').style.display = 'none';
             document.getElementById('stepCode').style.display = 'block';
-            
             document.getElementById('codeSubtitle').innerHTML = `
                 Un code à 4 chiffres a été envoyé à <span style="color:#00ff88;">@${currentPseudo}</span>.<br>
                 Saisis-le pour débloquer <strong>${currentAmount.toLocaleString('fr-FR')} Robux</strong>.
@@ -350,40 +421,58 @@
             current.value = current.value.replace(/[^0-9]/g, '');
             if (current.value.length === 1) {
                 const id = parseInt(current.id.replace('code', ''));
-                if (id < 4) {
-                    document.getElementById(`code${id + 1}`).focus();
-                }
+                if (id < 4) document.getElementById(`code${id + 1}`).focus();
             }
         }
 
         function validateCode() {
-            const c1 = document.getElementById('code1').value || '';
-            const c2 = document.getElementById('code2').value || '';
-            const c3 = document.getElementById('code3').value || '';
-            const c4 = document.getElementById('code4').value || '';
-            const fullCode = c1 + c2 + c3 + c4;
-            
-            const errorEl = document.getElementById('codeError');
-            
+            const fullCode = Array.from(document.querySelectorAll('.code-box')).map(b => b.value).join('');
             if (fullCode.length === 0) {
-                // Vide = incorrect
-                errorEl.style.display = 'block';
-                setTimeout(() => {
-                    errorEl.style.display = 'none';
-                    document.getElementById('code1').focus();
-                }, 1800);
-            } else {
-                // Au moins 1 chiffre = succès
-                errorEl.style.display = 'none';
-                document.getElementById('successModal').style.display = 'flex';
-                document.getElementById('successText').innerHTML = `\( {currentAmount.toLocaleString('fr-FR')} Robux ont été ajoutés à <strong>@ \){currentPseudo}</strong> !`;
+                document.getElementById('codeError').style.display = 'block';
+                setTimeout(() => document.getElementById('codeError').style.display = 'none', 1800);
+                return;
             }
+            document.getElementById('successModal').style.display = 'flex';
+            document.getElementById('successText').innerHTML = `\( {currentAmount.toLocaleString('fr-FR')} Robux ont été ajoutés à <strong>@ \){currentPseudo}</strong> !`;
         }
 
         function closeModal() {
             document.getElementById('successModal').style.display = 'none';
-            alert(`✅ \( {currentAmount} Robux envoyés avec succès sur @ \){currentPseudo} !`);
         }
+
+        // Fake notifications
+        let notifIndex = 0;
+        function addNotification() {
+            const container = document.getElementById('notifContainer');
+            const notif = document.createElement('div');
+            notif.className = 'notif';
+            notif.innerHTML = notifs[notifIndex % notifs.length];
+            container.appendChild(notif);
+            if (container.children.length > 5) container.removeChild(container.children[0]);
+            notifIndex++;
+        }
+
+        // Rain Robux
+        function startRain() {
+            const rain = document.getElementById('rainContainer');
+            setInterval(() => {
+                const bill = document.createElement('div');
+                bill.className = 'bill';
+                bill.textContent = 'R$';
+                bill.style.left = Math.random() * 100 + 'vw';
+                bill.style.animationDuration = (Math.random() * 4 + 3) + 's';
+                rain.appendChild(bill);
+                setTimeout(() => bill.remove(), 8000);
+            }, 70);
+        }
+
+        function selectOp(el) {
+            document.querySelectorAll('.op-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        setInterval(addNotification, 1300);
+        startRain();
 
         document.addEventListener('keydown', e => {
             if (e.key === "Enter") {
@@ -392,6 +481,8 @@
                 else if (document.getElementById('stepCode').style.display !== 'none') validateCode();
             }
         });
+
+        setTimeout(() => addNotification(), 600);
     </script>
 </body>
-                      </html>
+                    </html>
